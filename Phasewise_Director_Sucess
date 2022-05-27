@@ -1,0 +1,103 @@
+library(rvest)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggrepel)
+library(gridExtra)
+library(zoo)
+library(reshape2)
+library(car)
+library(plotly)
+library(stringr)
+library(ggpubr)
+library(shiny)
+library(plotly)
+library(gridExtra)
+
+
+
+movie_table <- read_html("https://en.wikipedia.org/wiki/List_of_Marvel_Cinematic_Universe_films")
+
+phase_one<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_One"), "table")[[3]],fill=T)[,c(1,3)])
+names(phase_one) <- NULL
+colnames(phase_one) <- c('Film','Director')
+phase_one$Director<-gsub("\\[.*","",as.character(phase_one$Director))
+#names(phase_one) <- make.names(names(phase_one)) remove special characters from the column headers
+phase_one_performance<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_One"), "table")[[11]],fill=T)[,c(1,5)],header=T)
+names(phase_one_performance) <- NULL
+colnames(phase_one_performance) <- phase_one_performance[1,]
+phase_one_performance<-phase_one_performance[-1,]
+merged_phase_one <- merge(phase_one,phase_one_performance,by.x="Film",by.y="Film")
+
+
+phase_two<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_Two"), "table")[[3]],fill=T)[,c(1,3)])
+names(phase_two) <- NULL
+colnames(phase_two) <- c('Film','Director')
+phase_two$Director<-gsub("\\[.*","",as.character(phase_two$Director))
+phase_two_performance<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_Two"), "table")[[9]],fill=T)[,c(1,5)])
+names(phase_two_performance) <- NULL
+colnames(phase_two_performance) <- phase_two_performance[1,]
+phase_two_performance<-phase_two_performance[-1,]
+merged_phase_two <- merge(phase_two,phase_two_performance,by.x="Film",by.y="Film")
+
+
+
+phase_three<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_Three"), "table")[[3]],fill=T)[,c(1,3)])
+#phase_infinity<- html_table(html_nodes(movie_table, "table")[[2]],fill=T)[,c(1,3)]
+names(phase_three) <- NULL
+colnames(phase_three) <- c('Film','Director')
+phase_three$Director<-gsub("\\[.*","",as.character(phase_three$Director))
+phase_three_performance<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_Three"), "table")[[10]],fill=T)[,c(1,5)])
+names(phase_three_performance) <- NULL
+colnames(phase_three_performance) <- phase_three_performance[1,]
+phase_three_performance<-phase_three_performance[-1,]
+merged_phase_three <- merge(phase_three,phase_three_performance,by.x="Film",by.y="Film")
+
+
+
+phase_four<- as.data.frame(html_table(html_nodes(movie_table, "table")[[3]],fill=T)[,c(1,3)])
+names(phase_four) <- NULL
+colnames(phase_four) <- c('Film','Director')
+phase_four$Director<-gsub("\\[.*","",as.character(phase_four$Director))
+phase_four_performance<- as.data.frame(html_table(html_nodes(read_html("https://en.wikipedia.org/wiki/Marvel_Cinematic_Universe:_Phase_Four"), "table")[[7]],fill=T)[,c(1,5)])
+names(phase_four_performance) <- NULL
+colnames(phase_four_performance) <- phase_four_performance[1,]
+phase_four_performance<-phase_four_performance[-1,]
+phase_four_performance$Worldwide<-gsub("\\[.*","",as.character(phase_four_performance$Worldwide))
+merged_phase_four <- merge(phase_four,phase_four_performance,by.x="Film",by.y="Film")
+
+#phase_four_performance$Worldwide<-as.numeric(phase_four_performance$Worldwide)
+
+merged_phase_one$Director2<-str_wrap(merged_phase_one$Director, width = 15)
+p1 <- qplot(Director2,Worldwide, data = merged_phase_one)+theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust=1))+geom_point(shape=18, color="blue")
+p1<-p1+labs(title = "Phase One", x = "Director", y = "World Wide Performance")
+
+merged_phase_two$Director2<-str_wrap(merged_phase_two$Director, width = 15)
+p2 <- qplot(Director2,Worldwide, data = merged_phase_two)+theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust=1))+geom_point(shape=18, color="red")
+p2<-p2+labs(title = "Phase Two", x = "Director", y = "World Wide Performance")
+
+merged_phase_three$Director2<-str_wrap(merged_phase_three$Director, width = 15)
+p3 <- qplot(Director2,Worldwide, data = merged_phase_three)+theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust=1))+geom_point(shape=18, color="green")
+p3<-p3+labs(title = "Phase Three", x = "Director", y = "World Wide Performance")
+
+merged_phase_four$Director2<-str_wrap(merged_phase_four$Director, width = 15)
+p4<- qplot(Director2,Worldwide, data = merged_phase_four)+theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust=1))+geom_point(shape=18, color="pink")
+p4<-p4+labs(title = "Phase Four", x = "Director", y = "World Wide Performance")
+
+#p<-ggarrange(p1,p2,p3,p4, labels = c("A", "B", "C","D"),ncol = 2, nrow = 2)
+server <- shinyServer(function(input, output, session) {
+output$shinyPlotObject <- renderPlot({
+  p=grid.arrange(p1,p2,p3,p4,ncol=4,top="Main Title")
+  print(p)
+})
+})
+
+ui <- shinyUI(
+  fluidPage(
+    plotOutput("shinyPlotObject", width = "100%")
+  )
+)
+
+shinyApp(ui = ui, server = server)
+
+
